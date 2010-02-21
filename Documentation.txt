@@ -1,0 +1,209 @@
+   
+   
+ ------------------------------------------------------------------------------------------------------------------------------
+ 
+ 				######	OAuth_Twitter.php Documentation  ######
+ 				----------------------------------------------
+ 								
+ 									Author  	: Basil B Thoppil
+ 									Version 	: 0.3 Alpha
+ 									Created on	: 23 Jan 2010 01:20 am GMT+05:30
+ 									Last modified on: 21 Feb 2010 15:00    GMT+05:30
+ 									email		: basilbthoppil@gmail.com
+ ------------------------------------------------------------------------------------------------------------------------------
+   
+   
+   
+   
+   
+   
+   
+_________________   SETTING UP THE ENVIRONMENT   ______________
+****************************************************************
+
+OAuth_Twitter works with Zend OAuth Library. So OAuth Library has to be there in your code base. For Zend Framework, you are 
+supposed to have complete OAuth library in /Library/OAuth.
+
+Download OAuth_Twitter.php and include the library into your code. This library includes consumer.php from OAuth Package. 
+( Since library is coded and tested as a small Twitter project in Zend Framework, I would suggest this library as an ideal one for 
+Zend projects )
+
+
+
+
+
+______________  REGISTERING YOUR APPLICATION WITH TWITTER ($config )   ______________
+*************************************************************************************
+
+You have to register your application with Twitter. We make use of the configuraiton details to get in touch with Twitter API
+using this library.
+
+The configuration details has to be assigned to an array and this array is the one and only argument to for the constructor of 
+'OAuth_Twitter' class
+
+	$configuration = array(
+	    'callbackUrl' => 'http://your_app.com/callback',     //he callback url your app have registered with twitter
+	    'siteUrl' => 'http://twitter.com/oauth',    // The url with which your app contact Twitter API
+	    'consumerKey' => '37yQOy5kvShfdWyRJp3SfdWy',   // the consumer key provided from twitter
+	    'consumerSecret' => '0VCb37y0V0VCb37yQOy5kvShfdWyRJp3SfdWyRJp3SXOxA'     // the secret key provided from twitter
+	);
+
+
+
+
+
+___________________   USING OAuth_Twitter methods in Your Code  ____________________  
+************************************************************************************
+
+
+Include the library to your code
+
+require_once 'OAuth_twitter.php';
+
+Creating an object of OAuth_Twitter 
+
+	$my_twitter = new OAuth_Twitter($configuration)
+
+
+
+---------------------------------------------------------------
+*** To authenticate with Twitter account--  requestAuth()  ***	
+---------------------------------------------------------------
+
+
+	This will set a session and redirect to the twitter authentication window. On successful authentication with Twitter
+	Twitter will redirect back to the callback URL. 
+	
+
+
+
+
+	
+---------------------------------------------------------------
+*** Call back from Twitter --- handleCallback()
+---------------------------------------------------------------
+	
+	my_twitter->handleCallback()  
+	
+	handleCallback() will set the ACCESS_TOKEN to a SESSION variable access the Twitter API. Your application will use 
+	this ACCESS_TOKEN for further access to the Twitter API
+	
+	
+
+	
+---------------------------------------------------------------	
+*** To Update the twitter status  ---  updateStatus($status)
+---------------------------------------------------------------
+
+      @arg    $status string  | Latest update
+      
+      It will check already authenticatied or not. If yes then update the status and return 1 if success.
+      
+      If $string is NULL then function will return 	-1
+      If $string > 140 then  will return 		-2
+      
+      
+
+      
+      
+--------------------------------------------------------------------------      
+*** To get the followers using user_id  --- getFollowersByUserId($user_id)
+--------------------------------------------------------------------------
+
+      @arg    $user_id    |  user_id of the user,
+      
+      return all followers as an array of objects
+      
+      
+      
+      
+      
+--------------------------------------------------------------------------------------------      
+*** To get the followers using handle (screen name)  --- getFollowersByHandle($screen_name)
+--------------------------------------------------------------------------------------------
+
+      @arg    $screen_name   string |  screen_name of the user,
+      
+      
+      eg. getFollowersByHandle('BasilBThoppil')
+      
+      return all followers as an array of objects
+
+***************************************************************************************************
+**
+--------   Jan 24 2010 21:55 GMT+530   ----------- by Basil B Thoppil <basilbthoppil@gmail.com>------
+*****************************************************************************************************
+
+	
+   
+--------------------------------------------------------------------------------------------      
+*** To get latest 20 updates of a specified user using (screen name)  --- getPublicUpdatesByHandle($screen_name)
+--------------------------------------------------------------------------------------------
+
+      @arg    $screen_name   string |  screen_name of the user,
+      
+      
+      eg. getPublicUpdatesByHandle('BasilBThoppil')
+      
+      return array includes 20 latest updates
+
+
+
+	
+
+
+   
+--------------------------------------------------------------------------------------------      
+*** To  get latest 20 updates of a specified user  using handle using $user_id  --- getPublicUpdatesByUserid($user_id)
+--------------------------------------------------------------------------------------------
+
+      @arg    $screen_name   string |  screen_name of the user,
+      
+      
+      eg. getPublicUpdatesByUserid(34566)
+      
+      return array includes 20 latest updates   (retarray[0]->'text')
+
+
+
+	
+
+--------------------------------------------------------------------------------------------      
+*** To  get 20 most recent Updates of a LIST using user_id and list_id,  --- getListUpdatesByUseridAndListId($user_id,$list_id)
+--------------------------------------------------------------------------------------------
+     This is equivalent to the home page of a list :: like www.twitter.com/basilbthoppil/ente-collab
+
+     * @param  string | int 	$user_id  --- 	Twitter user_id of the user. 
+     * @param  string | int 	$list_id  --- 	Twitter users list id of the user.      
+      
+
+      
+      return array includes 20 latest updates   (retarray[0]->'text')
+
+
+
+	
+
+--------------------------------------------------------------------------------------------      
+*** To  * Get all list followers 				---   getListFollowersByListname($user_name,$list_name)
+--------------------------------------------------------------------------------------------
+	
+     
+	 
+	 * @param  string | int 	$user_id  --- 	Twitter user_id of the user. 
+	 * @param  string | int 	$list_id  --- 	Twitter users list id of the user.
+      
+      return array includes 20 latest updates   (retarray[0]->'text')
+	
+	
+	
+--------------------------------------------------------------------------------------------      
+*** To  get most recent tweets contais the string provided, 'Search using a string'   --- searchTweetsDetails($tweet)
+--------------------------------------------------------------------------------------------
+	
+     
+      * @param  string | int 	$tweet  --- 	Search String.
+      
+      return array includes 20 latest updates   (retarray[0]->'text')
+	
+	
