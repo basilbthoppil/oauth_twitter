@@ -352,8 +352,23 @@ class OAuth_Twitter {
 	 * @param  string | int 	$tweet  --- 	Search String. 
 	 */	
 	function searchTweetsDetails($tweet){
-	    $sxml = file_get_contents('http://search.twitter.com/search.atom?lang=en&q='.$tweet);
+	    $sxml = file_get_contents('http://search.twitter.com/search.json?lang=en&q='.$tweet);
 	    return json_decode($sxml);
+	}	
+
+	function followATweety($screen_name){
+		
+          $consumer = new Zend_Oauth_Consumer($this->config);			
+	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
+	    $token = (object)$token;
+	    
+	    $client = $token->getHttpClient($this->config);
+
+	    $client->setUri('http://api.twitter.com/1/friendships/create.json');
+	    $client->setParameterGet('screen_name', $screen_name);
+	    $client->setMethod(Zend_Http_Client::GET);
+	    $response = $client->request();
+	    return json_decode($response->getBody());
 	}	
 	
 }
