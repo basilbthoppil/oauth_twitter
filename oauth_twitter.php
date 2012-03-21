@@ -4,7 +4,7 @@
  * 
  * *************   Before you start with OAuth_Twitter.php   ***************
  * 
- * This library acts as a connecting layer between OAuth and Twitter API
+ * This library acts as a helperClass for Twitter APIs which requires Zend_Oauth_Consumer
  * 
  * I suppose that your code contains Zend/Oauth Library.
  * This library includes Consumer.php
@@ -48,10 +48,26 @@ require_once 'Zend/Oauth/Consumer.php';
 class OAuth_Twitter {
 	
 	private $config; //App configuration Array
-	
-	
-	function __construct($configuration) {
-		$this->config = $configuration;
+	private $access_token;
+	private $save_token_in_session;
+	function __construct($config) {
+		$this->config = $config;
+		$save_token_in_session = isset($config['save_token_in_session']) ? true : false;
+		
+		if(isset($config['access_token']))
+			$this->access_token = $config['access_token'];
+		else 
+			$this->access_token = null;
+			
+		//If access_token is present in config - no other twitter app conf are required
+		if( $save_token_in_session && isset($this->access_token) && $this->access_token != '' )
+			$_SESSION['TWITTER_ACCESS_TOKEN'] = serialize($token);
+		
+		else if (!$this->access_token && $save_token_in_session && isset($_SESSION['TWITTER_ACCESS_TOKEN']))
+			$this->access_token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
+		
+		else
+			requestAuth();
 	}
 	
 	
@@ -69,10 +85,10 @@ class OAuth_Twitter {
 			 * Check for already authenticated and
 			 * app has TWITTER ACCESS TOKEN
 			 */
-		if (!$_SESSION['TWITTER_ACCESS_TOKEN']) {
+		if (!$_SESSION['TWITTER_ACCESS_TOKEN'] || !isset($this->access_token)) {
 			/*
 			 * Redirect to twitter API with REQUEST TOKEN
-			 */	
+			 */
 		    $token = $consumer->getRequestToken();
 		    $_SESSION['TWITTER_REQUEST_TOKEN'] = serialize($token);
 		    $consumer->redirect();
@@ -92,8 +108,22 @@ class OAuth_Twitter {
 		if (!empty($_GET) && isset($_SESSION['TWITTER_REQUEST_TOKEN'])) {	
 		    $token = $consumer->getAccessToken($_GET, unserialize($_SESSION['TWITTER_REQUEST_TOKEN']));
 		    $_SESSION['TWITTER_ACCESS_TOKEN'] = serialize($token);
+		    $this->access_token = $token;
+		    unset($_SESSION['TWITTER_REQUEST_TOKEN']);
 		    $_SESSION['logged_in'] = 1;
 		}
+	}
+	
+	/*
+	 * You may extend override this function to save access_token to db : Idea!!  :-)
+	 */
+	private function saveAccessToken($access_token) {
+		if( $save_token_in_session ) 
+			$_SESSION['TWITTER_ACCESS_TOKEN'] = serialize($access_token);
+	}
+	
+	public function getAccessToken() {
+		return $this->access_token;
 	}
 	
 	/*
@@ -118,17 +148,9 @@ class OAuth_Twitter {
 		}else if(strlen($status) > 140){
 			return -2;
 		}else{
-			if(!isset($_SESSION['TWITTER_ACCESS_TOKEN'])){
-				$this->requestAuth();	
-			}
-			$token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-		    $token = (object)$token;
-		    
-		    $client = $token->getHttpClient($this->config);
-		    $client->setUri('http://twitter.com/statuses/update.json');
-		    $client->setMethod(Zend_Http_Client::POST);
-		    $client->setParameterPost('status', $status);
-		    $response = $client->request();
+	    		$response =  makeAPIRequest('http://twitter.com/statuses/update.json' , 
+	    				array('status' => $status ) ,
+	    				Zend_Http_Client::POST );
 			if(isset($response)){
 				return 1;
 			}else{
@@ -149,20 +171,8 @@ class OAuth_Twitter {
 	 * @param int | string $user_id  --- Twitter User Id of the user. 
 	 */
 	function getFollowersByUserId($user_id){
-		if(!isset($_SESSION['TWITTER_ACCESS_TOKEN'])){
-			$this->requestAuth();	
-		}
-					
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-	    
-	    $client->setUri('http://twitter.com/statuses/followers.json');
-	    $client->setParameterGet('user_id', $user_id);
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
+	    return makeAPIRequest('http://twitter.com/statuses/followers.json' , 
+	    				array('user_id' => $user_id));
 	}	
 
 	
@@ -174,20 +184,8 @@ class OAuth_Twitter {
 	 * @param  string 	$screen_name  --- 	Twitter Screen Name of the user. 
 	 */	
 	function getFollowersByHandle($screen_name){
-		if(!isset($_SESSION['TWITTER_ACCESS_TOKEN'])){
-			$this->requestAuth();	
-		}
-					
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-
-	    $client->setUri('http://twitter.com/statuses/followers.json');
-	    $client->setParameterGet('screen_name', $screen_name);
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
+	    return makeAPIRequest('http://twitter.com/statuses/followers.json' , 
+	    				array('screen_name' => $screen_name));
 	}
 
 
@@ -201,21 +199,8 @@ class OAuth_Twitter {
 	 * @param int | string $user_id  --- Twitter User Id of the user. 
 	 */
 	function getFriendsByUserId($user_id){
-		
-		if(!isset($_SESSION['TWITTER_ACCESS_TOKEN'])){
-			$this->requestAuth();	
-		}
-		
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-	    
-	    $client->setUri('http://twitter.com/statuses/friends.json');
-	    $client->setParameterGet('user_id', $user_id);
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
+	    return makeAPIRequest('http://twitter.com/statuses/friends.json' , 
+	    			array('user_id' => $user_id));
 	}	
 	
 	
@@ -228,17 +213,8 @@ class OAuth_Twitter {
 	 */	
 	function getFriendsByHandle($screen_name){
 		$consumer = new Zend_Oauth_Consumer($this->config);
-			
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-
-	    $client->setUri('http://twitter.com/statuses/friends.json');
-	    $client->setParameterGet('screen_name', $screen_name);
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
+	    	return makeAPIRequest('http://twitter.com/statuses/friends.json' , 
+	    			array('screen_name' => $screen_name));
 	}	
 
 	
@@ -308,16 +284,7 @@ class OAuth_Twitter {
 	function getListMemebersByListname($user_name,$list_name){
 	    
 		$consumer = new Zend_Oauth_Consumer($this->config);			
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-
-	    $client->setUri('http://api.twitter.com/1/'.$user_name.'/'.$list_name.'/members.json');
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
-	    
+		return makeAPIRequest('http://api.twitter.com/1/'.$user_name.'/'.$list_name.'/members.json');	    
 	}	
 	
 	/*
@@ -333,15 +300,7 @@ class OAuth_Twitter {
 	function getListFollowersByListname($user_name,$list_name){
 		
 		$consumer = new Zend_Oauth_Consumer($this->config);			
-	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
-	    $token = (object)$token;
-	    
-	    $client = $token->getHttpClient($this->config);
-
-	    $client->setUri('http://api.twitter.com/1/'.$user_name.'/'.$list_name.'/subscribers.json');
-	    $client->setMethod(Zend_Http_Client::GET);
-	    $response = $client->request();
-	    return json_decode($response->getBody());
+	    	return makeAPIRequest('http://api.twitter.com/1/'.$user_name.'/'.$list_name.'/subscribers.json' );
 	}	
 	/*
 	 * Get most recent tweets contais the string provided,
@@ -356,20 +315,32 @@ class OAuth_Twitter {
 	    return json_decode($sxml);
 	}	
 
-	function followATweety($screen_name){
-		
-          $consumer = new Zend_Oauth_Consumer($this->config);			
+	function followATweety($screen_name){	
+		$consumer = new Zend_Oauth_Consumer($this->config);			
+          	return makeAPIRequest('http://api.twitter.com/1/friendships/create.json' ,
+	    			array('screen_name' => $screen_name)
+	    		     );
+	}
+	
+	private function makeAPIRequest($uri , $params = null, $method = Zend_Http_Client::GET) {
 	    $token = unserialize($_SESSION['TWITTER_ACCESS_TOKEN']);
 	    $token = (object)$token;
 	    
 	    $client = $token->getHttpClient($this->config);
 
-	    $client->setUri('http://api.twitter.com/1/friendships/create.json');
-	    $client->setParameterGet('screen_name', $screen_name);
-	    $client->setMethod(Zend_Http_Client::GET);
+	    $client->setUri($uri);
+	    
+	    if(isset($params) && !empty($params)) {
+	    	foreach($params as $key => $val ) {
+	    		$client->setParameterGet($key , $val);	
+	    	}
+	    }
+	    
+	    $client->setMethod($method);
+	    
 	    $response = $client->request();
-	    return json_decode($response->getBody());
-	}	
+	    return json_decode($response->getBody());	
+	}
 	
 }
 
