@@ -41,6 +41,11 @@ using this library.
 The configuration details has to be assigned to an array and this array is the one and only argument to for the constructor of 
 'OAuth_Twitter' class
 
+If access_token is already available, only that needs to be passed as configuration. 
+
+Optional save_token_in_session saves access token in current session $_SESSION['TWITTER_ACCESS_TOKEN']
+
+
 	$configuration = array(
 	    'callbackUrl' => 'http://your_app.com/callback',     //he callback url your app have registered with twitter
 	    'siteUrl' => 'http://twitter.com/oauth',    // The url with which your app contact Twitter API
@@ -89,7 +94,14 @@ Creating an object of OAuth_Twitter
 	this ACCESS_TOKEN for further access to the Twitter API
 	
 	
+	This internally calls saveAccessToken function, which now store the ACCESS_TOKEN in session (if save_in_session passed
+	in the configuration) or assigns to the private property.
 
+	To save access_token to Database, you may extend the class and override the saveAccessToken funciton 
+
+	OR 
+
+	use getAccessToken (returns the access_token being used - will not request for new, if its not found) function to get the access token OR get serialized access_token directly from session.
 	
 ---------------------------------------------------------------	
 *** To Update the twitter status  ---  updateStatus($status)
